@@ -1,0 +1,402 @@
+os.loadAPI("/tcg/fw")
+
+cards = {fw.newCard("", "", "noimage")}
+selectedCard = 1
+
+function paintimage(card, path, imagebackgroundcolor)
+	if imagebackgroundcolor then
+		local file = io.open("/tcg/cards/images/"..path, "w")
+		if file then
+			local c = imagebackgroundcolor
+			for i = 1, fw.imageH do
+				local line = ""
+				for q = 1, fw.imageW do
+					line = line..c
+				end
+				file:write(string.sub(line, 1, fw.imageW).."\n")
+			end
+			file:close()
+		end
+	end
+
+	shell.run("paint", "/tcg/cards/images/"..path)
+	card.image = path
+	return card
+end
+
+function editfunc(name)
+	if not fs.exists("/tcg/cards/scripts/"..name) then
+		local file = io.open("/tcg/cards/scripts/"..name, "w")
+		if file then
+			file:write("--[[\n")
+			file:write("\"action\" is fired when the card is put down on a deck\n")
+			file:write("arguments:\n")
+			file:write("1: the card table\n")
+			file:write("2: deck on which the card was played\n")
+			file:write("3: the game table, contains the deck tables\n")
+			file:write("\n")
+			file:write("\"update\" is fired when the card is updated\n")
+			file:write("arguments:\n")
+			file:write("1: the card table\n")
+			file:write("2: event\n")
+			file:write("3: event var 1\n")
+			file:write("4: event var 2\n")
+			file:write("5: event var 3\n")
+			file:write("6: the game table, contains the deck tables\n")
+			file:write("]]")
+			file:write("\n")
+			file:write("function action(self, deck, game)\n")
+			file:write("end\n")
+			file:write("\n")
+			file:write("function update(self, event, var1, var2, var3, game)\n")
+			file:write("end\n")
+			file:close()
+		end
+	end
+	shell.run("edit", "/tcg/cards/scripts/"..name)
+end
+
+function delcard()
+	if #cards>1 then
+		table.remove(cards, selectedCard)
+		if not cards[selectedCard] then
+			if cards[selectedCard+1] then
+				selectedCard = selectedCard+1
+			else
+				selectedCard = selectedCard-1
+			end
+		end
+	end
+end
+
+function loadCard()
+	input = fw.text(
+		"filename",
+		function(name)
+			local loaded = fw.loadCard("/saves/"..name)
+			if loaded then cards[selectedCard] = loaded end
+		end
+	)
+end
+
+function copycard()
+	local card = cards[selectedCard]
+	table.insert(
+		cards,
+		fw.newCard(
+			card.title,
+			card.description,
+			card.image
+		)
+	)
+	selectedCard = #cards
+end
+
+function newcard()
+	cards[#cards+1] = fw.newCard("", "", "noimage")
+	selectedCard=#cards
+end
+
+function initelements()
+	elements = {
+		title = fw.button(
+			fw.cardX+1, fw.cardY+1, fw.cardW-2, 1, "title",
+			"blue", "blue",
+			change.title,
+			true
+		),
+		description = fw.button(
+			fw.cardX+1, fw.cardY+fw.cardH-4, fw.imageW, 3, "description",
+			"blue", "blue",
+			change.description,
+			true
+		),
+		image = fw.button(
+			fw.cardX+1, fw.cardY+3, fw.imageW, fw.imageH, "image",
+			"blue", "blue",
+			change.image,
+			true
+		),
+		newimage = fw.button(
+			fw.cardX+1, fw.cardY+3, fw.imageW, fw.imageH, "paint",
+			"blue", "blue",
+			change.newimage,
+			true,
+			2
+		),
+		save = fw.button(
+			11, fw.winH-2, nil, 2, "save card",
+			"green", "lime",
+			function()
+				fw.saveCard(card, "saves/"..card.title)
+			end
+		),
+		savedeck = fw.button(
+			11, fw.winH, nil, 1, "save deck",
+			"lime", "green",
+			function()
+				input = fw.text(
+					"filename",
+					function(name)
+						fw.saveCard(cards, "packs/"..name)
+					end
+				)
+			end
+		),
+		load = fw.button(
+			1, fw.winH-2, 9, 1, "load card",
+			"blue", "lightBlue",
+			loadCard
+		),
+		loaddeck = fw.button(
+			1, fw.winH-1, 9, 1, "load deck",
+			"lightBlue", "blue",
+			function()
+				input = fw.text(
+					"filename",
+					function(name)
+						loaded = fw.loadCard("packs/"..name)
+						if loaded then cards = loaded end
+						selectedCard = math.ceil(#cards/2)
+					end
+				)
+			end
+		),
+		whatload = fw.button(
+			1, fw.winH, 9, 1, "cards",
+			"cyan", "blue",
+			function()
+				term.setBackgroundColor(colors.lightGray)
+				term.clear()
+				paintutils.drawFilledBox(1, 1, fw.winW, 3, colors.cyan)
+				paintutils.drawFilledBox(1, fw.winH-3, fw.winW, fw.winH, colors.cyan)
+				term.setTextColor(colors.white)
+				term.setCursorPos(1, 2)
+				textutils.slowWrite("These Cards are aviable to be loaded in the editor:", 220)
+				term.setCursorPos(1, 6)
+				term.setBackgroundColor(colors.lightGray)
+				textutils.pagedTabulate(fs.list("/tcg/cards/saves"))
+				term.setTextColor(colors.white)
+				term.setCursorPos(1, fw.winH-1)
+				term.setBackgroundColor(colors.cyan)
+				print("Press any key to get back to the editor!")
+				os.pullEvent("key")
+			end
+		),
+		delete = fw.button(
+			23, fw.winH-2, 8, 2, "delete",
+			"red", "orange",
+			delcard
+		),
+		deletesave = fw.button(
+			23, fw.winH, 8, 1, "delsave",
+			"orange", "yellow",
+			function()
+				input = fw.text(
+					"cardname",
+					function(name)
+						input2 = fw.text(
+							"delete"..name.."?!",
+							function(name)
+								if name == "yes" or name=="y" or name == "Yes" or name == "ja" then
+									fs.delete("/tcg/cards/saves/"..name)
+								end
+							end
+						)
+					end
+				)
+				input = input2
+			end
+		),
+		new = fw.button(
+			32, fw.winH-2, 5, 2, "new",
+			"gray", "lightGray",
+			newcard
+		),
+		copy = fw.button(
+			32, fw.winH, 5, 1, "copy",
+			"lightGray", "gray",
+			function()
+				cards[#cards+1] = fw.newCard("", "", "noimage")
+				selectedCard=#cards
+			end
+		),
+		exit = fw.button(
+			38, fw.winH-2, nil, 3, "exit",
+			"yellow", "orange",
+			function()
+				os.unloadAPI(fw)
+				fw.exit()
+			end
+		),
+		script = fw.button(
+			45, fw.winH-2, nil, 3, "script",
+			"white", "lightGray",
+			function()
+				if not card.script then
+					input = fw.text(
+						"filename",
+						function(name)
+							card.script = name
+							editfunc(name)
+						end
+					)
+				else
+					editfunc(card.script)
+				end
+			end
+		),
+		right = fw.button(
+			fw.cardX+fw.cardW+1, fw.cardY, fw.sideCards*fw.cardW, 12, ">",
+			"blue", "blue",
+			function()
+					if cards[selectedCard+1] then
+						selectedCard = selectedCard+1
+					end
+			end,
+			true
+		),
+		left = fw.button(
+			fw.cardX-fw.sideCards*fw.cardW-fw.cardW+5, fw.cardY, fw.sideCards*fw.cardW+5, 12, "<",
+			"blue", "blue",
+			function()
+				if cards[selectedCard-1] then
+					selectedCard = selectedCard-1
+				end
+			end,
+			true
+		),
+		help = fw.button(
+			fw.winW-1, 2, 2, 2, "??",
+			"green", "lime",
+			function()
+				if fs.exists("/tcg/editor/manual") then
+					local id = multishell.launch({}, "/tcg/editor/manual")
+					multishell.setFocus(id)
+				end
+			end
+		)
+	}
+end
+
+change = {
+	title = function()
+		input = fw.text(
+			"insert title",
+			function(name)
+				card.title = name
+			end,
+			card.title
+		)
+	end,
+	description = function()
+		input = fw.text(
+			"insert description",
+			function(name)
+				card.description = name
+			end,
+			card.description
+		)
+	end,
+	image = function()
+		input = fw.text(
+			"insert filename",
+			function(name)
+				if fs.exists("/tcg/cards/images/"..name) and #name>0 then
+					card.image = name
+					cardimage = paintutils.loadImage(card.image)
+				end
+			end,
+			card.image
+		)
+	end,
+	newimage = function(name)
+		if card.image == "noimage" then
+			input = fw.text(
+				"image name",
+				function(name)
+					paintpath = name
+					if #paintpath>0 then
+						if fs.exists("/tcg/cards/images/"..paintpath) then
+							card = paintimage(card, paintpath)
+						else
+							input2 = fw.text(
+								"color code",
+								function(col)
+									card = paintimage(card, paintpath, col)
+								end
+							)
+						end
+					end
+				end
+			)
+		else
+			paintimage(card, card.image)
+		end
+	end
+}
+
+while true do
+	--draw stuff
+	fw.winW, fw.winH = term.getSize()
+	initelements()
+	local textinput = {inp = input, inp2 = input2}
+	card = cards[selectedCard]
+	fw.draw(elements, "black")
+	term.setBackgroundColor(colors.gray)
+	paintutils.drawLine(1, 1, fw.winW, 1)
+	term.setTextColor(colors.white)
+	term.setCursorPos(1, 1)
+	print("Editing '"..card.title.."', card number: "..selectedCard)
+
+	for i = -4, 0 do
+		if cards[selectedCard+i] then
+			fw.drawCard(fw.cardX+5*i, fw.cardY-1*i/2, cards[selectedCard+i])
+		end
+	end
+	for i = -4, 0 do
+		if cards[selectedCard-i] then
+			fw.drawCard(fw.cardX-5*i, fw.cardY-1*i/2, cards[selectedCard-i])
+		end
+	end
+	fw.drawCard(fw.cardX, fw.cardY, card)
+
+	term.setCursorPos(fw.winW-15, 1)
+	term.blit("0123456789abcdef", "8ea91da87b297517", "0123456789abcdef")
+
+	fw.draw(textinput)
+
+	--update fw
+	local event, var1, var2, var3 = os.pullEventRaw()
+	if event == "key" and input.title == "" then
+		if var1 == keys.right then
+			if selectedCard~=#cards then selectedCard=selectedCard+1 end
+		elseif var1 == keys.left then
+			if selectedCard~=1 then selectedCard=selectedCard-1 end
+		elseif var1 == keys.up then
+			change.title()
+		elseif var1 == keys.down then
+			change.description()
+		elseif var1 == keys.s then
+			fw.saveCard(card, "saves/"..card.title)
+		elseif var1 == keys.backspace or var1 == keys.d or var1 == keys.delete then
+			delcard()
+		elseif var1 == keys.c then
+			copycard()
+		elseif var1 == keys.l then
+			loadCard()
+		elseif var1 == keys.e then
+			fw.exit()
+		elseif var1 == keys.n then
+			newcard()
+		end
+	end
+	fw.update(textinput, event, var1, var2, var3)
+	fw.update(elements, event, var1, var2, var3)
+	if not textinput.inp then
+		input = fw.button(1, 1, 1, 1, "", nil, nil, nil, true)
+	end
+	if not textinput.inp2 then
+		input2 = fw.button(1, 1, 1, 1, "", nil, nil, nil, true)
+	end
+end

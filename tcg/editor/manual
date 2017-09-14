@@ -1,0 +1,80 @@
+os.loadAPI("/tcg/manual")
+
+man = manual.manual(
+  "The card editor main manual or how to make CC-cards",
+  {
+    manual.entry(
+      "What is this?",
+      {
+        "You are looking at the ingame wiki.\nBut this article is about the main\nprogramm, the card editor. You can make\nuseless but cool trading cards with it.\nThe online card game and the collecting\nand trading programm is in work. Will\nbe a server/client thing. This editor\nwill be the tool to make the cards for\nthe online games.",
+        "There are following functions:\n1. edit cards with title, image and description\n2. save and load cards and card packs\n3. edit images and scripts with a click from the editor\n4. access this cool wiki and a list cards that can be loaded\n5. basic operations like copy, delete and new card",
+        "You can use this for fun only or for education. Ask how something here is made or leave feadback at the forum, i will be happy and make more stuff!"
+      },
+      {
+        manual.image(
+          6, 12,
+          paintutils.loadImage("/tcg/images/manual/havefun"),
+          3
+        ),
+        manual.image(
+          40, 4,
+          paintutils.loadImage("tcg/images/manual/examplecard"),
+          1
+        )
+      }
+    ),
+    manual.entry(
+      "The manual",
+      {
+        "The manual is this wiki you are looking at at this moment. It can be used to explain things with images and text, put in some pages which are stored in articles. This page is the first page in the article 'The manual'. You can see the selected article in the article bar on the top of the screen. Change the selected article with the 'tab' key or by clicking on one of the articles. By clicking one of the buttons on the right or left bottom of the screen, you can navigate through the pages. You can also use the arrow keys instead.",
+      }
+    ),
+    manual.entry(
+      "Control help",
+      {
+        "Here, all the buttons on the bottom of the screen will be explained. Many of them have keyboard shorcuts, which will be shown here to. Some simple functions, like editing the text are also documented.",
+        "load card: loads card, see directorys\nload deck: loads a deck, see directorys\ncards    : shows all saved cards\nsave card: saves in a file with the cardname\nsave deck: asks for name, see directorys\ndelete   : deletes selected card\ndelsave  : deletes a save file\nnew      : creates empty card for editing\ncopy     : copy selected card and selects it\nexit     : exits application\nscript   : opens the script for the card, see scripting",
+        "Keyboard shortcuts:\n\nload:             l\nsave:             s\nedit cards:\n  title:          up\n  description:    down\nnavigate in deck: left and right\ndelete:           d/entf/backspace\nnew card:         n\ncopy card:        c\nexit editor:      e",
+        "Mouse actions\n\nTo navigate through the cards you can use the mouse. Click right next to the card to move right, and left next to the card to move left. You can edit the title/image/description with the mouse by simply clicking on the boxes of the elements. By clicking on the image with the right mouse button, you can create a new image."
+      },
+      {
+        manual.image(
+          10, 14,
+          paintutils.loadImage("tcg/images/manual/mouse"),
+          4
+        )
+      }
+    ),
+    manual.entry(
+      "Scripting",
+      {
+          "In the menu bar at the bottom of the screen is a 'script' button. It will open the script file of the selected card. If there is no script for this card yet, it will create one with some hopefully helpfull comments. There are two functions which can be edited. See you on the next page!",
+          "The 'action' function\nExecuted: when the card is played on a deck.\nArguments:\n  self: the card itself\n  deck: the deck on which the card was played\n  game: a table with all the decks of the game in it\nexample:\nfunction action(self, deck, game)\n  if deck.name == \"lava\" then\n    print(\"I am dead.\") \n  end\nend",
+          "The 'update' function\nExecuted: always when the card is updated.\nArguments:\n  self: the card itself\n  event, var1, var2, var3: The event which caused the update, with its variables.\nexample:\nfunction update(self, event, var1)\n  if event == \"char\" then\n    print(\"key \"..var1..\" is pressed! Should I do something!?\")\n  end\nend",
+      },
+      {
+        manual.image(
+          7, 1,
+          paintutils.loadImage("tcg/images/manual/menu"),
+          1
+        )
+      }
+    ),
+    manual.entry(
+      "Directorys",
+      {
+        "This article is about the paths that are used by the editor, for example to save decks.",
+        "tcg          the main folder\n  cards      contains everything about or for cards\n    images   the card images\n    packs    saved packs\n    saves    saved cards\n    scripts  saved scripts\n  editor     the editor and this manual is saved\n  game       here will be the game programm\n  images     usefull pictures\n    manual   some pictures for the manual"
+      }
+    )
+  }
+)
+
+while true do
+  event, var1, var2, var3 = os.pullEventRaw()
+  if var1==keys.e then
+    break
+  end
+  man:update(event, var1, var2, var3)
+  man:draw()
+end

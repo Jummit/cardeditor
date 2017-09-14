@@ -1,0 +1,133 @@
+os.loadAPI("/tcg/fw")
+
+function manual(manualtitle, entrys)
+  return {
+    nextpage = function(self, direction)
+      if self.entrys[self.localentry].pages[self.localpage+direction] then
+        self.localpage = self.localpage+direction
+      end
+    end,
+    manualtitle=manualtitle,
+    entrys=entrys,
+    pageslist=pageslist,
+    bgcol = "lightBlue",
+    drkbgcol = "blue",
+    txtcol = "white",
+    localentry = 1,
+    localpage = 1,
+    draw = function(self)
+      term.setBackgroundColor(colors[self.bgcol])
+      term.clear()
+      term.setBackgroundColor(colors[self.drkbgcol])
+      paintutils.drawFilledBox(1, 1, fw.winW, 1)
+      term.setCursorPos(1, 1)
+      term.setTextColor(colors[self.txtcol])
+      print(self.manualtitle)
+      fw.draw(self.entrybuttons)
+      term.setCursorPos(1, 4)
+      term.setTextColor(colors.gray)
+      term.setBackgroundColor(colors[self.bgcol])
+      print(self.entrys[self.localentry].pages[self.localpage])
+      if self.entrys[self.localentry].images then
+        for _, image in pairs(self.entrys[self.localentry].images) do
+          if image.pagenum == self.localpage then
+            paintutils.drawImage(image.image, image.x, image.y)
+          end
+        end
+      end
+    end,
+    update = function(self, event, var1, var2, var3)
+      self.entrybuttons = {}
+      local x = 1
+      local y = 2
+      local col = "gray"
+      for key, entry in pairs(self.entrys) do
+        if x+#entry.title+2 > fw.winW then
+          x = 1
+          y = y + 1
+        end
+        if key == self.localentry then
+          if col == "gray" then
+            col = "green"
+          else
+          col = "lime"
+          end
+        end
+        table.insert(
+          self.entrybuttons,
+          fw.button(
+            x, y, nil, 1,
+            entry.title,
+            col, self.txtcol,
+            function(button)
+              for key, entry in pairs(self.entrys) do
+                if entry.title == button.title then
+                  self.localentry = key
+                  self.localpage = 1
+                end
+              end
+            end
+          )
+        )
+        x = x + #entry.title+2
+        if col == "gray" or col == "green" then
+          col = "lightGray"
+        else
+          col = "gray"
+        end
+      end
+
+      table.insert(
+        self.entrybuttons,
+        fw.button(
+          1, fw.winH-2, 3, 3,
+          "<",
+          self.drkbgcol, self.txtcol,
+          function()
+            self:nextpage(-1)
+          end
+        )
+      )
+      table.insert(
+        self.entrybuttons,
+        fw.button(
+          fw.winW-2, fw.winH-2, 3, 3,
+          ">",
+          self.drkbgcol, self.txtcol,
+          function()
+            self:nextpage(1)
+          end
+        )
+      )
+      if event == "key" then
+        if var1==keys.left then
+          self:nextpage(-1)
+        elseif var1==keys.right then
+          self:nextpage(1)
+        elseif var1==keys.tab then
+          if self.entrys[self.localentry+1] then
+            self.localentry = self.localentry+1
+          else
+            self.localentry = 1
+          end
+          self.localpage = 1
+        end
+      end
+      fw.update(self.entrybuttons, event, var1, var2, var3)
+    end
+  }
+end
+
+function image(x, y, image, pagenum)
+  return {
+    x=x,y=y,image=image,pagenum=pagenum
+  }
+end
+
+function entry(title, pages, images)
+  return {
+    title=title,
+    pages=pages,
+    images=images
+  }
+end
